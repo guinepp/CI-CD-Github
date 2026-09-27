@@ -40,8 +40,12 @@ def create_annual_report(input_file: str, output_file: str) -> None:
     df["year"] = df["date"].dt.year
 
     annual_summary = (
-        df.groupby("year")["amount"]
-        .agg(total_sales="sum", avg_sales="mean", total_orders="nunique")
+        df.groupby("year")
+        .agg(
+            total_sales=("amount", "sum"),
+            avg_sales=("amount", "mean"),
+            total_orders=("order_id", "nunique"),
+        )
         .reset_index()
     )
 

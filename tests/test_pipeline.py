@@ -45,7 +45,7 @@ def test_creates_annual_report(tmp_path):
     input_file.write_text(
         "order_id,customer,amount,date\n"
         "1,Ana,100.0,2023-01-15\n"
-        "2,Bruno,200.0,2023-02-20\n"
+        "2,Bruno,100.0,2023-02-20\n"
         "3,Carlos,150.0,2024-03-10\n",
         encoding="utf-8",
     )
@@ -57,5 +57,17 @@ def test_creates_annual_report(tmp_path):
     result = pd.read_csv(output_file)
 
     assert len(result) == 2
-    assert result.loc[result["year"] == 2023, "total_sales"].values[0] == 300.0
+    assert result.loc[result["year"] == 2023, "total_sales"].values[0] == 200.0
     assert result.loc[result["year"] == 2024, "total_sales"].values[0] == 150.0
+    assert result.loc[result["year"] == 2023, "total_orders"].values[0] == 2
+
+
+def test_pipeline_rejects_missing_columns(tmp_path):
+    input_file = tmp_path / "sales.csv"
+    output_file = tmp_path / "summary.csv"
+    input_file.write_text("order_id,amount\n1,100\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Colunas obrigatórias"):
+        run_pipeline(str(input_file), str(output_file))
+
+    assert not output_file.exists()
