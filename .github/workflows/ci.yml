@@ -27,3 +27,14 @@ jobs:
         run: python -m bandit -r app
       - name: Testes
         run: python -m pytest -q
+      - name: Gerar relatorios
+        run: python app/pipeline.py
+      - name: Publicar artefato validado
+        uses: actions/upload-artifact@v4
+        with:
+          name: sales-summary
+          path: |
+            output/summary.csv
+            output/annual_summary.csv
+          if-no-files-found: error
+          retention-days: 30
