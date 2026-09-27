@@ -11,5 +11,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Validar gatilho e runner
-        run: echo 'Etapas I e II verificadas'
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
