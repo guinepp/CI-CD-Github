@@ -1,81 +1,102 @@
-# Projeto Base — CI/CD com GitHub Actions
+# CI/CD Github
 
-Este projeto foi preparado para uma atividade prática de construção de uma esteira de CI/CD.
+[![CI/CD](https://github.com/guinepp/CI-CD-Github/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/guinepp/CI-CD-Github/actions/workflows/ci.yml)
 
-## Estrutura
+Prática baseada no tutorial Construção de Esteira CI/CD, de Faber Henrique
+Zacarias Xavier (PUC Minas), e no [projeto original](https://github.com/faberhenrique/ex1DataOps).
+O histórico de origem foi preservado.
 
-- `app/pipeline.py`: script Python principal
-- `data/sales.csv`: arquivo de entrada
-- `tests/test_pipeline.py`: testes automatizados
-- `requirements.txt`: dependências do projeto
-- `.github/workflows/`: pasta onde o workflow deverá ser criado pelos alunos
+## Fluxo final
 
-## Objetivo do projeto
+```text
+push em feature/esteira ou main
+  -> validate (Ubuntu + Python 3.11)
+     -> checkout -> dependências -> flake8 -> mypy -> bandit -> pytest
+     -> executar pipeline -> publicar sales-summary
+  -> deploy (somente main, após validate)
+     -> baixar sales-summary da mesma execução
+     -> conferir arquivos -> entregar production-summary
+```
 
-O script lê um arquivo CSV com vendas, valida os dados e gera um resumo com:
+O deploy é uma entrega didática de CSVs ao ambiente production do GitHub
+Actions. Não há servidor externo no enunciado: o job promove os mesmos arquivos
+aprovados, sem recalculá-los. Os artefatos ficam disponíveis por 30 dias.
 
-- total de vendas
-- média de vendas
-- total de pedidos
+## Etapas do PDF
 
-## Como executar localmente
+| Etapa | Implementação | Validador |
+| --- | --- | --- |
+| Inicial | Script e testes locais; corrigidos dados e relatório anual | 4 testes e geração do CSV |
+| I | Primeiro gatilho exclusivo em feature/esteira | Push inicia execução |
+| II | Job validate, ubuntu-latest | Job concluído |
+| III | Checkout e Python 3.11 | Steps concluídas nos logs |
+| IV | pip install e flake8 app tests | Lint aprovado |
+| V | Pytest, mypy e bandit | Testes, tipagem e segurança aprovados |
+| VI | Geração e upload de output/summary.csv | Artefato sales-summary |
+| VII | deploy com needs: validate e condição em main | Feature pula deploy; main entrega artefato |
 
-### 1. Criar ambiente virtual
+Na etapa VII, main é acrescentada ao gatilho. Manter apenas feature/esteira
+impediria o deploy após o merge. Os validadores são executados antes de avançar;
+os commits registram a evolução.
+
+## Executar localmente
+
+Requer Python 3.11; a validação local também funciona com Python 3.12.
 
 ```bash
 python -m venv .venv
 ```
 
-### 2. Ativar ambiente virtual
-
-No Linux/macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-No Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### 3. Instalar dependências
+Ative com `.venv\Scripts\Activate.ps1` no PowerShell ou
+`source .venv/bin/activate` em Linux/macOS. Depois:
 
 ```bash
-pip install -r requirements.txt
-```
-
-### 4. Executar o script
-
-```bash
+python -m pip install -r requirements.txt
+python -m flake8 app tests
+python -m mypy app
+python -m bandit -r app
+python -m pytest -q
 python app/pipeline.py
 ```
 
-### 5. Executar os testes
+Resultado de output/summary.csv para o CSV de exemplo:
 
-```bash
-pytest
+```csv
+total_sales,avg_sales,total_orders
+700.0,175.0,4
 ```
 
-## Chamada de API no CI/CD
+Também é gerado output/annual_summary.csv. Os dados são exemplos fictícios.
+O CSV recebeu date para compatibilidade com o relatório anual da base.
+A contagem anual usa order_id, com teste para pedidos de mesmo valor.
+pandas-stubs foi fixado na versão compatível com pandas 2.2.3.
 
-O workflow em `.github/workflows/ci.yml` faz uma chamada `POST` ao final da execução, desde que o secret `CI_API_URL` esteja configurado no GitHub.
+## Consultar as entregas
 
-Secrets esperados:
+Abra [Actions](https://github.com/guinepp/CI-CD-Github/actions), selecione uma
+execução bem-sucedida e baixe sales-summary. Em main, também há
+production-summary e o registro do ambiente production.
+O job falha se um arquivo esperado estiver ausente. Testes e análises bloqueiam
+a geração e a entrega em caso de erro; não há continue-on-error.
 
-- `CI_API_URL`: endpoint da API que receberá a notificação
-- `CI_API_TOKEN`: token Bearer enviado no header `Authorization`
+Para repetir, faça mudanças na branch feature/esteira, envie um push, confira
+validate e promova por pull request para main.
 
-## Resultado esperado
+## Reflexão técnica
 
-Após executar o script, será criado o arquivo:
+1. **CI e CD:** CI prepara o runtime, instala dependências, verifica estilo,
+   tipagem, segurança e comportamento, e gera um artefato aprovado. CD recebe
+   esse artefato e o entrega ao ambiente final apenas em main.
+2. **Script e esteira:** o script transforma os dados; a esteira automatiza
+   quando, onde e sob quais critérios esse script executa e entrega resultados.
+   O script também funciona fora do GitHub.
+3. **Staging:** entraria após validate e antes de deploy, consumindo o mesmo
+   artefato. Testes de integração em staging e, se desejado, aprovação de
+   ambiente seriam condições para promover à produção.
 
-```text
-output/summary.csv
-```
+## Escopo
 
-## Importante
-
-A pasta `.github/workflows/` está vazia de propósito.
-O objetivo da atividade é que os alunos construam o arquivo do workflow ao longo do tutorial.
+As regras de risco adicionais da origem foram preservadas. Radon permanece
+como ferramenta exploratória; a régua adicional obrigatória usa mypy e bandit.
+O exemplo legado de regras de risco tem alta complexidade; não foi imposto um
+limite de radon fora do escopo. Não são necessários secrets nem APIs externas.

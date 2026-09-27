@@ -2,7 +2,7 @@ name: CI/CD - Pratica
 
 on:
   push:
-    branches: [feature/esteira]
+    branches: [feature/esteira, main]
 
 permissions:
   contents: read
@@ -10,6 +10,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,5 +37,33 @@ jobs:
           path: |
             output/summary.csv
             output/annual_summary.csv
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Baixar artefato aprovado
+        uses: actions/download-artifact@v4
+        with:
+          name: sales-summary
+          path: delivery
+      - name: Conferir entrega
+        run: |
+          test -s delivery/summary.csv
+          test -s delivery/annual_summary.csv
+          sha256sum delivery/*.csv
+          echo '## Entrega em production' >> "$GITHUB_STEP_SUMMARY"
+          echo 'CSVs aprovados promovidos sem reprocessamento.' >> "$GITHUB_STEP_SUMMARY"
+          cat delivery/summary.csv >> "$GITHUB_STEP_SUMMARY"
+      - name: Entregar artefato em production
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-summary
+          path: delivery/*.csv
           if-no-files-found: error
           retention-days: 30
