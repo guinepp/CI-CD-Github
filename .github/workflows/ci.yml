@@ -1,0 +1,15 @@
+name: CI/CD - Pratica
+
+on:
+  push:
+    branches: [feature/esteira]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar gatilho e runner
+        run: echo 'Etapas I e II verificadas'
